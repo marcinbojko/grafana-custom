@@ -1,8 +1,3 @@
-# grafana-custom
-
-## Usage
-
-```yaml
 version: "3.7"
 services:
   grafana-xxl:
@@ -18,8 +13,3 @@ volumes:
   grafana_lib: {}
   grafana_log: {}
   grafana_etc: {}
-```
-
-## To Do
-
-* rework plugin part to make image thinner
