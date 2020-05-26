@@ -5,7 +5,7 @@
 ```yaml
 version: "3.7"
 services:
-  grafana-xxl:
+  grafana:
     restart: unless-stopped
     image: marcinbojko/grafana-custom:latest
     ports:
