@@ -1,10 +1,10 @@
-ARG GRAFANA_VERSION="7.0.1"
+ARG GRAFANA_VERSION="7.0.3"
 FROM grafana/grafana:${GRAFANA_VERSION}
 USER root
 ARG GF_INSTALL_IMAGE_RENDERER_PLUGIN="true"
 ARG GF_INSTALL_PLUGINS="true"
 ENV GF_PATHS_PLUGINS="/var/lib/grafana-plugins"
-LABEL VERSION="7.0.1.20200524"
+LABEL VERSION="7.0.3.20200604"
 LABEL RELEASE="grafana-custom"
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 CMD [ "curl","localhost:3000" ]
 RUN mkdir -p "$GF_PATHS_PLUGINS" && \
