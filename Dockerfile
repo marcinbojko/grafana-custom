@@ -1,10 +1,10 @@
-ARG GRAFANA_VERSION="7.1.2"
+ARG GRAFANA_VERSION="7.1.3"
 FROM grafana/grafana:${GRAFANA_VERSION}
 USER root
 ARG GF_INSTALL_IMAGE_RENDERER_PLUGIN="true"
 ARG GF_INSTALL_PLUGINS="true"
 ENV GF_PATHS_PLUGINS="/var/lib/grafana-plugins"
-LABEL VERSION="7.1.2.20200806"
+LABEL VERSION="7.1.3.20200806"
 LABEL RELEASE="grafana-custom"
 SHELL ["/bin/ash", "-euo", "pipefail", "-c"]
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 CMD [ "curl","localhost:3000" ]
@@ -24,7 +24,7 @@ RUN if [ $GF_INSTALL_IMAGE_RENDERER_PLUGIN = "true" ]; then \
 fi
 USER grafana
 ENV GF_RENDERER_PLUGIN_CHROME_BIN="/usr/bin/chromium-browser"
-RUN if [ $GF_INSTALL_IMAGE_RENDERER_PLUGIN = "true" ]; then \
+RUN if [ "$GF_INSTALL_IMAGE_RENDERER_PLUGIN" = "true" ]; then \
     grafana-cli \
         --pluginsDir "$GF_PATHS_PLUGINS" \
         --pluginUrl https://github.com/grafana/grafana-image-renderer/releases/latest/download/plugin-linux-x64-glibc-no-chromium.zip \
