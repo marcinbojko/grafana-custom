@@ -1,15 +1,15 @@
-ARG GRAFANA_VERSION="7.2.2"
+ARG GRAFANA_VERSION="7.3.3"
 FROM grafana/grafana:${GRAFANA_VERSION}
 USER root
 ARG GF_INSTALL_IMAGE_RENDERER_PLUGIN="true"
 ARG GF_INSTALL_PLUGINS="true"
 ENV GF_PATHS_PLUGINS="/var/lib/grafana-plugins"
-LABEL VERSION="7.2.2.20201021"
+LABEL VERSION="7.3.3.20201120"
 LABEL RELEASE="grafana-custom"
 SHELL ["/bin/ash", "-euo", "pipefail", "-c"]
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 CMD [ "curl","localhost:3000/healthz" ]
+HEALTHCHECK --interval=30s --timeout=15s --start-period=15s --retries=3 CMD [ "curl","localhost:3000/healthz" ]
 RUN mkdir -p "$GF_PATHS_PLUGINS" \
-    && chown -R grafana:grafana "$GF_PATHS_PLUGINS" \
+    && chown -R 472:472 "$GF_PATHS_PLUGINS" \
     && apk add --no-cache curl jq \
     && rm -rf /tmp/*
 
