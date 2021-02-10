@@ -4,7 +4,7 @@ version=$(grep "LABEL VERSION" Dockerfile|awk '{print $2}'|cut -d\" -f2)
 maintainer="marcinbojko"
 echo Version: "$version" found
 echo Release: "$release" found
-if [ ! -z "$version" ] && [ ! -z "$release" ]; then
+if [ -n "$version" ] && [  -n "$release" ]; then
   docker login
   docker tag "$release":"$version" "$maintainer/$release:$version"
   docker tag "$release":"$version" "$maintainer/$release":latest

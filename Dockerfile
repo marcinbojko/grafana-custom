@@ -1,13 +1,13 @@
-ARG GRAFANA_VERSION="7.3.7"
+ARG GRAFANA_VERSION="7.4.0"
 FROM grafana/grafana:${GRAFANA_VERSION}
 USER root
 ARG GF_INSTALL_IMAGE_RENDERER_PLUGIN="true"
 ARG GF_INSTALL_PLUGINS="true"
 ENV GF_PATHS_PLUGINS="/var/lib/grafana-plugins"
-LABEL VERSION="7.3.7.20210117"
+LABEL VERSION="7.4.0.20210210"
 LABEL RELEASE="grafana-custom"
 SHELL ["/bin/ash", "-euo", "pipefail", "-c"]
-HEALTHCHECK --interval=30s --timeout=15s --start-period=15s --retries=3 CMD [ "curl","localhost:3000/healthz" ]
+HEALTHCHECK --interval=30s --timeout=15s --retries=3 CMD [ "curl","localhost:3000/healthz" ]
 RUN mkdir -p "$GF_PATHS_PLUGINS" \
     && chown -R 472:472 "$GF_PATHS_PLUGINS" \
     && apk add --no-cache curl jq \
@@ -30,7 +30,6 @@ RUN if [ "$GF_INSTALL_IMAGE_RENDERER_PLUGIN" = "true" ]; then \
         --pluginUrl https://github.com/grafana/grafana-image-renderer/releases/latest/download/plugin-linux-x64-glibc-no-chromium.zip \
         plugins install grafana-image-renderer; \
 fi
-
 RUN if [ "$GF_INSTALL_PLUGINS" = "true" ]; then \
     PLUGINS=$(curl -s https://grafana.net/api/plugins?orderBy=name | jq '.items[] | select(.internal=='false') | .slug' | tr -d '"'); \
     for plugin in $PLUGINS; do \

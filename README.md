@@ -1,5 +1,7 @@
 # grafana-custom
 
+Based on grafana-xxl, all possible plugins embedded into image to shorten the time for start
+
 ## Usage
 
 ```yaml
