@@ -4,7 +4,7 @@ USER root
 ARG GF_INSTALL_IMAGE_RENDERER_PLUGIN="true"
 ARG GF_INSTALL_PLUGINS="true"
 ENV GF_PATHS_PLUGINS="/var/lib/grafana-plugins"
-LABEL VERSION="7.4.3.2021025"
+LABEL VERSION="7.4.3.20210226"
 LABEL RELEASE="grafana-custom"
 SHELL ["/bin/ash", "-euo", "pipefail", "-c"]
 HEALTHCHECK --interval=30s --timeout=15s --retries=3 CMD [ "curl","localhost:3000/healthz" ]
