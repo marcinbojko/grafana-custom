@@ -1,4 +1,5 @@
 #!/bin/bash
+export DOCKER_BUILDKIT=1
 release=$(grep "LABEL RELEASE" Dockerfile|awk '{print $2}'|cut -d\" -f2)
 version=$(grep "LABEL VERSION" Dockerfile|awk '{print $2}'|cut -d\" -f2)
 echo Version: "$version" found
