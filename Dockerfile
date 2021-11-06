@@ -1,11 +1,12 @@
-ARG GRAFANA_VERSION="8.2.2"
+ARG GRAFANA_VERSION="8.2.3"
 FROM grafana/grafana:${GRAFANA_VERSION}
 USER root
 ARG GF_INSTALL_IMAGE_RENDERER_PLUGIN="true"
 ARG GF_INSTALL_PLUGINS="true"
 ENV GF_PATHS_PLUGINS="/var/lib/grafana-plugins"
-LABEL version="8.2.2.20211026"
+LABEL version="8.2.3.20211106"
 LABEL release="grafana-custom"
+LABEL maintainer="marcinbojko"
 SHELL ["/bin/ash", "-euo", "pipefail", "-c"]
 HEALTHCHECK --interval=30s --timeout=15s --retries=3 CMD [ "curl","localhost:3000/healthz" ]
 RUN mkdir -p "$GF_PATHS_PLUGINS" \
