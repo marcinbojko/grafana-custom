@@ -27,7 +27,7 @@ if [ "$build_status" == 0 ]; then
   rm -rfv .coverage.*||true
   trivy image --output .coverage."$version"_trivy.txt "$release":"$version"
   dive --ci "$release":"$version" > .coverage."$version"_dive.txt
-  dockle -f json -o .coverage."$version"_dockle.txt "$release":"$version"
+  sudo dockle -f json -o .coverage."$version"_dockle.txt "$release":"$version"
 else
  echo "Docker build failed, exiting now"
 fi
