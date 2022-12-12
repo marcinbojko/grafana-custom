@@ -31,6 +31,16 @@ jobs:
           export release=$(grep -i "LABEL RELEASE" Dockerfile|awk '{print $2}'|cut -d\" -f2)
           export version=$(grep -i "LABEL VERSION" Dockerfile|awk '{print $2}'|cut -d\" -f2)
           export maintainer=$(grep -i "LABEL MAINTAINER" Dockerfile|awk '{print $2}'|cut -d\" -f2)
+          echo "version=$version" >> $GITHUB_ENV
+          echo "release=$release" >> $GITHUB_ENV
+          echo "maintainer=$maintainer" >> $GITHUB_ENV
           export DOCKER_BUILDKIT=1
-          docker build --pull --no-cache -t  "$maintainer/$release":"$version" .
-
+          docker build --pull --no-cache -t  "$maintainer/$release":"$version"-dev .
+          docker push "$maintainer/$release":"$version"-dev
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ env.maintainer }}/${{ env.release }}:${{ env.version }}-dev'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          timeout: '20m0s'
