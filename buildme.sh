@@ -11,7 +11,9 @@ else
   exit 1
 fi
 if [ -n "$version" ] && [ -n "$release" ]; then
+  docker build --pull --no-cache --platform linux/arm64 -t "$release":"$version" .
   docker build --pull --no-cache -t "$release":"$version" .
+
   #docker build --pull -t "$release":"$version" .
   build_status=$?
   docker container prune --force
@@ -21,6 +23,7 @@ else
   echo "No $version found, exiting"
   exit 1
 fi
+
 # coverage
 if [ "$build_status" == 0 ]; then
   echo "Docker build succeed"

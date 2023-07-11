@@ -2,7 +2,7 @@ version: "3.8"
 services:
   grafana:
     restart: unless-stopped
-    image: marcinbojko/grafana-custom:9.3.16.20230626
+    image: marcinbojko/grafana-custom:latest
     ports:
      - "3000:3000"
     volumes:
