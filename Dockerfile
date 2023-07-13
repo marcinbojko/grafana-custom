@@ -4,7 +4,7 @@ USER root
 ARG GF_INSTALL_IMAGE_RENDERER_PLUGIN="true"
 ARG GF_INSTALL_PLUGINS="true"
 ENV GF_PATHS_PLUGINS="/var/lib/grafana-plugins"
-LABEL version="9.4.13.20230711"
+LABEL version="9.4.13.20230713"
 LABEL release="grafana-custom"
 LABEL maintainer="marcinbojko"
 SHELL ["/bin/ash", "-euo", "pipefail", "-c"]
@@ -36,5 +36,4 @@ RUN if [ "$GF_INSTALL_PLUGINS" = "true" ]; then \
         echo "Installing plugin: $plugin"; \
         grafana-cli --pluginsDir "$GF_PATHS_PLUGINS" plugins install "$plugin" || true; \
     done; \
-#    ln -sf /usr/glibc-compat/lib64/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2; \
 fi
