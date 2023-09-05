@@ -11,7 +11,7 @@ else
   exit 1
 fi
 if [ -n "$version" ] && [ -n "$release" ]; then
-  docker build --pull --no-cache --platform linux/arm64 -t "$release":"$version" .
+  # docker build --pull --no-cache --platform linux/arm64 -t "$release":"$version" .
   docker build --pull --no-cache -t "$release":"$version" .
 
   #docker build --pull -t "$release":"$version" .
