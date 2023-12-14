@@ -1,10 +1,10 @@
 ARG GRAFANA_VERSION="9.5.12"
 FROM grafana/grafana-oss:${GRAFANA_VERSION}
 USER root
-ARG GF_INSTALL_IMAGE_RENDERER_PLUGIN="true"
+ARG GF_INSTALL_IMAGE_RENDERER_PLUGIN="false"
 ARG GF_INSTALL_PLUGINS="true"
 ENV GF_PATHS_PLUGINS="/var/lib/grafana-plugins"
-LABEL version="9.5.12.20231025"
+LABEL version="9.5.12.20231214"
 LABEL release="grafana-custom"
 LABEL maintainer="marcinbojko"
 SHELL ["/bin/ash", "-euo", "pipefail", "-c"]
@@ -19,7 +19,7 @@ USER grafana
 # Array of plugin slugs to skip during installation
 
 RUN if [ "$GF_INSTALL_PLUGINS" = "true" ]; then \
-    PLUGINS_TO_SKIP="bsull-materialize-datasource bsull-console-datasource gabrielthomasjacobs-zendesk-datasource grafana-opcua-datasource"; \
+    PLUGINS_TO_SKIP="bsull-materialize-datasource bsull-console-datasource gabrielthomasjacobs-zendesk-datasource grafana-opcua-datasource grafana-image-renderer"; \
     PLUGINS=$(curl -s https://grafana.net/api/plugins?orderBy=name | jq -r '.items[] | select(.internal==false and .status=="active") | .slug' | tr -d '"'); \
     for plugin in $PLUGINS; do \
         SKIP=false; \
@@ -36,4 +36,18 @@ RUN if [ "$GF_INSTALL_PLUGINS" = "true" ]; then \
         echo "Installing plugin: $plugin"; \
         grafana-cli --pluginsDir "$GF_PATHS_PLUGINS" plugins install "$plugin" || true; \
     done; \
-fi
+    ls -lah "$GF_PATHS_PLUGINS";\
+    if [-e "$GF_PATHS_PLUGINS"/grafana-image-renderer ]; then \
+        echo "Removing grafana-image-renderer"; \
+        rm -rfv "$GF_PATHS_PLUGINS"/grafana-image-renderer || true; \
+    fi; \
+    fi
+# Run - add external plugins
+RUN VERSION=$(curl -s https://api.github.com/repos/VictoriaMetrics/grafana-datasource/releases/latest|jq -r .tag_name); \
+    echo "$VERSION"; \
+    curl -L https://github.com/VictoriaMetrics/grafana-datasource/releases/download/"$VERSION"/victoriametrics-datasource-"$VERSION".tar.gz -o /tmp/plugin.tar.gz; \
+    tar -xf /tmp/plugin.tar.gz -C /tmp; \
+    mv /tmp/victoriametrics-datasource "$GF_PATHS_PLUGINS"/; \
+    rm /tmp/plugin.tar.gz; \
+    ls -lah "$GF_PATHS_PLUGINS";\
+    sleep 5;

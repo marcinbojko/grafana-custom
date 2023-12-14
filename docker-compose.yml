@@ -2,7 +2,7 @@ version: "3.8"
 services:
   grafana:
     restart: unless-stopped
-    image: marcinbojko/grafana-custom:latest
+    image: marcinbojko/grafana-custom:9.5.12.20231214
     ports:
      - "3000:3000"
     volumes:
@@ -13,6 +13,7 @@ services:
       GF_RENDERING_SERVER_URL: http://renderer:8081/render
       GF_RENDERING_CALLBACK_URL: http://grafana:3000/
       GF_LOG_FILTERS: rendering:debug
+      GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: grafana-image-renderer,victoriametrics-datasource
   renderer:
     image: grafana/grafana-image-renderer:latest
     ports:
