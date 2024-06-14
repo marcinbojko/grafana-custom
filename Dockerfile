@@ -1,10 +1,10 @@
-ARG GRAFANA_VERSION="10.4.2"
+ARG GRAFANA_VERSION="10.4.4"
 FROM grafana/grafana-oss:${GRAFANA_VERSION}
 USER root
 ARG GF_INSTALL_IMAGE_RENDERER_PLUGIN="false"
 ARG GF_INSTALL_PLUGINS="true"
 ENV GF_PATHS_PLUGINS="/var/lib/grafana-plugins"
-LABEL version="10.4.2.20240419"
+LABEL version="10.4.4.20240614"
 LABEL release="grafana-custom"
 LABEL maintainer="marcinbojko"
 SHELL ["/bin/ash", "-euo", "pipefail", "-c"]
@@ -15,6 +15,16 @@ RUN mkdir -p "$GF_PATHS_PLUGINS" \
     && rm -rf /tmp/*
 USER grafana
 
+
+
+RUN VERSION=$(curl -s https://api.github.com/repos/VictoriaMetrics/grafana-datasource/releases/latest|jq -r .tag_name); \
+    echo "$VERSION"; \
+    curl -L https://github.com/VictoriaMetrics/grafana-datasource/releases/download/"$VERSION"/victoriametrics-datasource-"$VERSION".tar.gz -o /tmp/plugin.tar.gz; \
+    tar -xf /tmp/plugin.tar.gz -C /tmp; \
+    mv /tmp/victoriametrics-datasource "$GF_PATHS_PLUGINS"/; \
+    rm /tmp/plugin.tar.gz; \
+    ls -lah "$GF_PATHS_PLUGINS";\
+    sleep 5;
 # shellcheck SC2026
 # Array of plugin slugs to skip during installation
 
@@ -42,12 +52,3 @@ RUN if [ "$GF_INSTALL_PLUGINS" = "true" ]; then \
         rm -rfv "$GF_PATHS_PLUGINS"/grafana-image-renderer || true; \
     fi; \
     fi
-# Run - add external plugins
-RUN VERSION=$(curl -s https://api.github.com/repos/VictoriaMetrics/grafana-datasource/releases/latest|jq -r .tag_name); \
-    echo "$VERSION"; \
-    curl -L https://github.com/VictoriaMetrics/grafana-datasource/releases/download/"$VERSION"/victoriametrics-datasource-"$VERSION".tar.gz -o /tmp/plugin.tar.gz; \
-    tar -xf /tmp/plugin.tar.gz -C /tmp; \
-    mv /tmp/victoriametrics-datasource "$GF_PATHS_PLUGINS"/; \
-    rm /tmp/plugin.tar.gz; \
-    ls -lah "$GF_PATHS_PLUGINS";\
-    sleep 5;
