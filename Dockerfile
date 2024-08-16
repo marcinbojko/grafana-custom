@@ -1,10 +1,10 @@
-ARG GRAFANA_VERSION="11.1.0"
+ARG GRAFANA_VERSION="11.1.4"
 FROM grafana/grafana-oss:${GRAFANA_VERSION}
 USER root
 ARG GF_INSTALL_IMAGE_RENDERER_PLUGIN="false"
 ARG GF_INSTALL_PLUGINS="true"
 ENV GF_PATHS_PLUGINS="/var/lib/grafana-plugins"
-LABEL version="11.1.0.20240627"
+LABEL version="11.1.4.20240816"
 LABEL release="grafana-custom"
 LABEL maintainer="marcinbojko"
 SHELL ["/bin/ash", "-euo", "pipefail", "-c"]
@@ -17,7 +17,7 @@ USER grafana
 
 
 
-RUN VERSION=$(curl -s https://api.github.com/repos/VictoriaMetrics/grafana-datasource/releases/latest|jq -r .tag_name); \
+RUN VERSION=$(curl -sL https://api.github.com/repos/VictoriaMetrics/grafana-datasource/releases/latest|jq -r .tag_name); \
     echo "$VERSION"; \
     curl -L https://github.com/VictoriaMetrics/grafana-datasource/releases/download/"$VERSION"/victoriametrics-datasource-"$VERSION".tar.gz -o /tmp/plugin.tar.gz; \
     tar -xf /tmp/plugin.tar.gz -C /tmp; \
@@ -30,7 +30,7 @@ RUN VERSION=$(curl -s https://api.github.com/repos/VictoriaMetrics/grafana-datas
 
 RUN if [ "$GF_INSTALL_PLUGINS" = "true" ]; then \
     PLUGINS_TO_SKIP="bsull-materialize-datasource bsull-console-datasource gabrielthomasjacobs-zendesk-datasource grafana-opcua-datasource grafana-image-renderer"; \
-    PLUGINS=$(curl -s https://grafana.net/api/plugins?orderBy=name | jq -r '.items[] | select(.internal==false and .status=="active") | .slug' | tr -d '"'); \
+    PLUGINS=$(curl -sL https://grafana.net/api/plugins?orderBy=name | jq -r '.items[] | select(.internal==false and .status=="active") | .slug' | tr -d '"'); \
     for plugin in $PLUGINS; do \
         SKIP=false; \
         for skip_plugin in $PLUGINS_TO_SKIP; do \
