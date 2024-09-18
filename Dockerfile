@@ -1,10 +1,10 @@
-ARG GRAFANA_VERSION="11.1.4"
+ARG GRAFANA_VERSION="11.1.5"
 FROM grafana/grafana-oss:${GRAFANA_VERSION}
 USER root
 ARG GF_INSTALL_IMAGE_RENDERER_PLUGIN="false"
 ARG GF_INSTALL_PLUGINS="true"
 ENV GF_PATHS_PLUGINS="/var/lib/grafana-plugins"
-LABEL version="11.1.4.20240816"
+LABEL version="11.1.5.20240918"
 LABEL release="grafana-custom"
 LABEL maintainer="marcinbojko"
 SHELL ["/bin/ash", "-euo", "pipefail", "-c"]
@@ -44,7 +44,7 @@ RUN if [ "$GF_INSTALL_PLUGINS" = "true" ]; then \
             continue; \
         fi; \
         echo "Installing plugin: $plugin"; \
-        grafana-cli --pluginsDir "$GF_PATHS_PLUGINS" plugins install "$plugin" || true; \
+        grafana cli --pluginsDir "$GF_PATHS_PLUGINS" plugins install "$plugin" || true; \
     done; \
     ls -lah "$GF_PATHS_PLUGINS";\
     if [-e "$GF_PATHS_PLUGINS"/grafana-image-renderer ]; then \
