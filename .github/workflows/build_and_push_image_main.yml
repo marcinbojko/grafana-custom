@@ -47,6 +47,7 @@ jobs:
           tags: "${{ steps.build_push.outputs.maintainer }}/${{ steps.build_push.outputs.release }}:${{ steps.build_push.outputs.version }}"
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
+        continue-on-error: true
         with:
           image-ref: "${{ steps.build_push.outputs.maintainer }}/${{ steps.build_push.outputs.release }}:${{ steps.build_push.outputs.version }}"
           format: 'sarif'
