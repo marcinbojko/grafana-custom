@@ -1,10 +1,10 @@
-ARG GRAFANA_VERSION="11.3.0"
+ARG GRAFANA_VERSION="11.3.0-security-01"
 FROM grafana/grafana-oss:${GRAFANA_VERSION}
 USER root
 ARG GF_INSTALL_IMAGE_RENDERER_PLUGIN="false"
 ARG GF_INSTALL_PLUGINS="true"
 ENV GF_PATHS_PLUGINS="/var/lib/grafana-plugins"
-LABEL version="11.3.0.20241029"
+LABEL version="11.3.0.20241113"
 LABEL release="grafana-custom"
 LABEL maintainer="marcinbojko"
 SHELL ["/bin/ash", "-euo", "pipefail", "-c"]
@@ -14,8 +14,6 @@ RUN mkdir -p "$GF_PATHS_PLUGINS" \
     && apk add --no-cache curl jq \
     && rm -rf /tmp/*
 USER grafana
-
-
 
 RUN VERSION=$(curl -sL https://api.github.com/repos/VictoriaMetrics/grafana-datasource/releases/latest|jq -r .tag_name); \
     echo "$VERSION"; \
@@ -47,7 +45,7 @@ RUN if [ "$GF_INSTALL_PLUGINS" = "true" ]; then \
         grafana cli --pluginsDir "$GF_PATHS_PLUGINS" plugins install "$plugin" || true; \
     done; \
     ls -lah "$GF_PATHS_PLUGINS";\
-    if [-e "$GF_PATHS_PLUGINS"/grafana-image-renderer ]; then \
+    if [ -e "$GF_PATHS_PLUGINS"/grafana-image-renderer ]; then \
         echo "Removing grafana-image-renderer"; \
         rm -rfv "$GF_PATHS_PLUGINS"/grafana-image-renderer || true; \
     fi; \

@@ -11,7 +11,7 @@ services:
     restart: unless-stopped
     image: marcinbojko/grafana-custom:latest
     ports:
-     - "3000:3000"
+      - "3000:3000"
     volumes:
       - grafana_lib:/var/lib/grafana
       - grafana_log:/var/log/grafana
@@ -24,4 +24,5 @@ volumes:
 
 ## To Do
 
-* rework plugin part to make image thinner
+- rework plugin part to make image thinner
+- use GitHub Actions

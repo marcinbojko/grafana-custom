@@ -4,7 +4,7 @@ services:
     restart: unless-stopped
     image: marcinbojko/grafana-custom:10.2.4.20240304
     ports:
-     - "3000:3000"
+      - "3000:3000"
     volumes:
       - grafana_lib:/var/lib/grafana
       - grafana_log:/var/log/grafana
@@ -19,9 +19,8 @@ services:
     ports:
       - 8081
     environment:
-      ENABLE_METRICS: 'true'
+      ENABLE_METRICS: "true"
 volumes:
   grafana_lib: {}
   grafana_log: {}
   grafana_etc: {}
-
