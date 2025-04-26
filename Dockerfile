@@ -1,10 +1,10 @@
-ARG GRAFANA_VERSION="11.6.0"
+ARG GRAFANA_VERSION="11.5.4"
 FROM grafana/grafana-oss:${GRAFANA_VERSION}
 USER root
 ARG GF_INSTALL_IMAGE_RENDERER_PLUGIN="false"
 ARG GF_INSTALL_PLUGINS="true"
 ENV GF_PATHS_PLUGINS="/var/lib/grafana-plugins"
-LABEL version="11.6.0.20250331"
+LABEL version="11.5.4.20250426"
 LABEL release="grafana-custom"
 LABEL maintainer="marcinbojko"
 SHELL ["/bin/ash", "-euo", "pipefail", "-c"]
