@@ -1,10 +1,10 @@
-ARG GRAFANA_VERSION="11.6.3-security-01"
+ARG GRAFANA_VERSION="12.1.0"
 FROM grafana/grafana-oss:${GRAFANA_VERSION}
 USER root
 ARG GF_INSTALL_IMAGE_RENDERER_PLUGIN="false"
 ARG GF_INSTALL_PLUGINS="true"
 ENV GF_PATHS_PLUGINS="/var/lib/grafana-plugins"
-LABEL version="11.6.3-security-01.20250718"
+LABEL version="12.1.0.20250813"
 LABEL release="grafana-custom"
 LABEL maintainer="marcinbojko"
 SHELL ["/bin/ash", "-euo", "pipefail", "-c"]
@@ -23,6 +23,17 @@ RUN VERSION=$(curl -sL https://api.github.com/repos/VictoriaMetrics/victoriametr
     rm /tmp/plugin.tar.gz; \
     ls -lah "$GF_PATHS_PLUGINS";\
     sleep 5;
+
+RUN VERSION=$(curl -sL https://api.github.com/repos/VictoriaMetrics/victorialogs-datasource/releases/latest|jq -r .tag_name); \
+    echo "$VERSION"; \
+    curl -L https://github.com/VictoriaMetrics/victorialogs-datasource/releases/download/"$VERSION"/victoriametrics-logs-datasource-"$VERSION".tar.gz -o /tmp/plugin.tar.gz; \
+    tar -xf /tmp/plugin.tar.gz -C /tmp; \
+    mv /tmp/victoriametrics-logs-datasource "$GF_PATHS_PLUGINS"/; \
+    rm /tmp/plugin.tar.gz; \
+    ls -lah "$GF_PATHS_PLUGINS";\
+    sleep 5;
+
+
 # shellcheck SC2026
 # Array of plugin slugs to skip during installation
 
