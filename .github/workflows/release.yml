@@ -1,0 +1,77 @@
+---
+name: Release
+on:
+  push:
+    tags: ["*"]
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  attestations: read
+  checks: write
+  contents: write
+  deployments: read
+  discussions: read
+  id-token: write
+  issues: read
+  pages: read
+  packages: write
+  pull-requests: write
+  repository-projects: read
+  security-events: read
+  statuses: write
+
+jobs:
+  check-image:
+    name: Check if Docker image exists
+    runs-on: ubuntu-latest
+    outputs:
+      image-exists: ${{ steps.check.outputs.exists }}
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - name: Get tag
+        id: tag
+        run: |
+          echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+
+      - name: Check if image exists
+        id: check
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          # Check if image exists in DockerHub
+          if docker manifest inspect "marcinbojko/grafana:$TAG" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "✅ Image already exists: $TAG"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "❌ Image does not exist: $TAG"
+          fi
+
+  build-if-needed:
+    needs: check-image
+    name: Build Docker Image (if needed)
+    if: needs.check-image.outputs.image-exists != 'true'
+    uses: marcinbojko/reusable-workflows/.github/workflows/docker_build_and_push.yml@main
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
+  create-release:
+    needs: [check-image, build-if-needed]
+    if: always() && needs.check-image.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.check-image.outputs.tag }}
+          generate_release_notes: true
+          body: |
+            ## Docker Image
+            `marcinbojko/grafana:${{ needs.check-image.outputs.tag }}`
+            ${{ needs.check-image.outputs.image-exists == 'true' && '🎯 **Used existing Docker image**' || '🏗️ **Built new Docker image**' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
