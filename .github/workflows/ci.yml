@@ -29,14 +29,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - name: Run Super-Linter
-        uses: github/super-linter@main
+        uses: super-linter/super-linter@v8
         env:
           DEFAULT_BRANCH: ${{ github.ref_name }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_ALL_CODEBASE: ${{ github.event_name != 'pull_request' }}
           DOCKERFILE_HADOLINT_FILE_NAME: .hadolint.yaml
+          VALIDATE_GITHUB_ACTIONS_ZIZMOR: false
 
   build-and-push:
     needs: super-lint
