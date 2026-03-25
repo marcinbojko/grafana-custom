@@ -1,24 +1,25 @@
 ---
 # Watches for new Grafana releases (major >= 12, non-prerelease).
-# Currently in NOTIFICATION-ONLY mode — steps that modify the repo are commented out.
-# When ready to enable auto-build, uncomment:
-#   - "Update Dockerfile" step
-#   - "Commit, tag and push" step
-#   - Change checkout token from GITHUB_TOKEN to GH_PAT
-#   - Change permissions.contents from read to write
+# On a new version: updates Dockerfile, commits to master, pushes a tag → triggers release.yml.
 #
-# REQUIRED SECRET (when enabling auto-build): GH_PAT — a Personal Access Token
-# with 'repo' scope. GITHUB_TOKEN cannot trigger downstream workflows on push.
+# REQUIRED SECRET: GH_PAT — Personal Access Token with 'repo' scope.
+# GITHUB_TOKEN cannot trigger downstream workflows on push.
 
 name: Grafana Release Watcher
 
 on:
   schedule:
     - cron: "0 */6 * * *" # every 6 hours
-  workflow_dispatch: # inputs will be added when auto-build is enabled
+  workflow_dispatch: # checkov:skip=CKV_GHA_7:force_build is an intentional manual override
+    inputs:
+      force_build:
+        description: "Force build even if this Grafana version is already tagged"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   check-and-update:
