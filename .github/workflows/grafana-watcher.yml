@@ -76,7 +76,7 @@ jobs:
         with:
           ref: master
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GH_PAT }}
 
       - name: Check if this Grafana version is already tagged
         id: tag_check
@@ -99,8 +99,9 @@ jobs:
         if: steps.filter.outputs.qualifies == 'true'
         run: |
           ALREADY="${{ steps.tag_check.outputs.already_tagged }}"
+          FORCE="${{ inputs.force_build }}"
 
-          if [ "${ALREADY}" = "true" ]; then
+          if [ "${ALREADY}" = "true" ] && [ "${FORCE}" != "true" ]; then
             echo "proceed=false" >> "$GITHUB_OUTPUT"
             echo "Version ${{ steps.grafana.outputs.version }} already tagged — nothing to do"
           else
@@ -108,43 +109,37 @@ jobs:
             echo "Proceeding with ${{ steps.grafana.outputs.version }}"
           fi
 
-      # ------------------------------------------------------------------ #
-      # DISABLED — notification-only mode                                  #
-      # Uncomment when ready to enable auto-build.                         #
-      # Also: switch checkout token to GH_PAT, permissions.contents: write #
-      # ------------------------------------------------------------------ #
-      #
-      # - name: Update Dockerfile
-      #   id: update
-      #   if: steps.decision.outputs.proceed == 'true'
-      #   run: |
-      #     VERSION="${{ steps.grafana.outputs.version }}"
-      #     DATE=$(date +%Y%m%d)
-      #     NEW_LABEL="${VERSION}.${DATE}"
-      #
-      #     sed -i "s/ARG GRAFANA_VERSION=\"[^\"]*\"/ARG GRAFANA_VERSION=\"${VERSION}\"/" Dockerfile
-      #     sed -i "s/LABEL version=\"[^\"]*\"/LABEL version=\"${NEW_LABEL}\"/"           Dockerfile
-      #
-      #     echo "new_label=${NEW_LABEL}" >> "$GITHUB_OUTPUT"
-      #
-      #     echo "Dockerfile after update:"
-      #     grep -E "ARG GRAFANA_VERSION|LABEL version" Dockerfile
-      #
-      # - name: Commit, tag and push
-      #   if: steps.decision.outputs.proceed == 'true'
-      #   run: |
-      #     NEW_LABEL="${{ steps.update.outputs.new_label }}"
-      #
-      #     git config user.name  "github-actions[bot]"
-      #     git config user.email "github-actions[bot]@users.noreply.github.com"
-      #
-      #     git add Dockerfile
-      #     git commit -m "${NEW_LABEL}"
-      #     git tag "${NEW_LABEL}"
-      #     git push origin HEAD:master
-      #     git push origin "${NEW_LABEL}"
-      #
-      #     echo "Pushed commit and tag: ${NEW_LABEL} — release.yml will now handle the build"
+      - name: Update Dockerfile
+        id: update
+        if: steps.decision.outputs.proceed == 'true'
+        run: |
+          VERSION="${{ steps.grafana.outputs.version }}"
+          DATE=$(date +%Y%m%d)
+          NEW_LABEL="${VERSION}.${DATE}"
+
+          sed -i "s/ARG GRAFANA_VERSION=\"[^\"]*\"/ARG GRAFANA_VERSION=\"${VERSION}\"/" Dockerfile
+          sed -i "s/LABEL version=\"[^\"]*\"/LABEL version=\"${NEW_LABEL}\"/"           Dockerfile
+
+          echo "new_label=${NEW_LABEL}" >> "$GITHUB_OUTPUT"
+
+          echo "Dockerfile after update:"
+          grep -E "ARG GRAFANA_VERSION|LABEL version" Dockerfile
+
+      - name: Commit, tag and push
+        if: steps.decision.outputs.proceed == 'true'
+        run: |
+          NEW_LABEL="${{ steps.update.outputs.new_label }}"
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add Dockerfile
+          git commit -m "${NEW_LABEL}"
+          git tag "${NEW_LABEL}"
+          git push origin HEAD:master
+          git push origin "${NEW_LABEL}"
+
+          echo "Pushed commit and tag: ${NEW_LABEL} — release.yml will now handle the build"
 
       - name: Display notification summary
         if: steps.filter.outputs.qualifies == 'true'
