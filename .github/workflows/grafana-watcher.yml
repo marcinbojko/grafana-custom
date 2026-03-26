@@ -27,129 +27,79 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Fetch latest Grafana release
-        id: grafana
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          RELEASE_JSON=$(curl -sf \
-            -H "Authorization: Bearer ${GH_TOKEN}" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/grafana/grafana/releases/latest")
-
-          TAG=$(echo "$RELEASE_JSON"        | jq -r '.tag_name')
-          PRERELEASE=$(echo "$RELEASE_JSON" | jq -r '.prerelease')
-          PUBLISHED=$(echo "$RELEASE_JSON"  | jq -r '.published_at')
-          VERSION="${TAG#v}"
-          MAJOR=$(echo "$VERSION" | cut -d. -f1)
-
-          {
-            echo "tag=${TAG}"
-            echo "version=${VERSION}"
-            echo "major=${MAJOR}"
-            echo "prerelease=${PRERELEASE}"
-            echo "published=${PUBLISHED}"
-          } >> "$GITHUB_OUTPUT"
-
-          echo "Latest Grafana release: ${TAG} (pre-release: ${PRERELEASE}, published: ${PUBLISHED})"
-
-      - name: Filter — major >= 12, non-prerelease
-        id: filter
-        run: |
-          MAJOR="${{ steps.grafana.outputs.major }}"
-          PRERELEASE="${{ steps.grafana.outputs.prerelease }}"
-
-          if [ "${PRERELEASE}" = "true" ]; then
-            echo "qualifies=false" >> "$GITHUB_OUTPUT"
-            echo "Skip: ${{ steps.grafana.outputs.tag }} is a pre-release"
-          elif [ "${MAJOR}" -ge 12 ]; then
-            echo "qualifies=true" >> "$GITHUB_OUTPUT"
-            echo "Qualifies: ${{ steps.grafana.outputs.version }} (major=${MAJOR})"
-          else
-            echo "qualifies=false" >> "$GITHUB_OUTPUT"
-            echo "Skip: major ${MAJOR} < 12"
-          fi
-
       - name: Checkout master
-        if: steps.filter.outputs.qualifies == 'true'
         uses: actions/checkout@v6
         with:
           ref: master
           fetch-depth: 0
           token: ${{ secrets.GH_PAT }}
 
-      - name: Check if this Grafana version is already tagged
-        id: tag_check
-        if: steps.filter.outputs.qualifies == 'true'
+      - name: Fetch qualifying Grafana releases and build new ones
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FORCE_BUILD: ${{ inputs.force_build }}
         run: |
-          VERSION="${{ steps.grafana.outputs.version }}"
-          EXISTING=$(git tag --list "${VERSION}.*")
+          RELEASES=$(curl -sf \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/grafana/grafana/releases?per_page=20")
 
-          if [ -n "${EXISTING}" ]; then
-            echo "already_tagged=true" >> "$GITHUB_OUTPUT"
-            echo "Existing tags for ${VERSION}:"
-            echo "${EXISTING}"
-          else
-            echo "already_tagged=false" >> "$GITHUB_OUTPUT"
-            echo "No existing tags for ${VERSION}"
-          fi
-
-      - name: Decide whether to proceed
-        id: decision
-        if: steps.filter.outputs.qualifies == 'true'
-        run: |
-          ALREADY="${{ steps.tag_check.outputs.already_tagged }}"
-          FORCE="${{ inputs.force_build }}"
-
-          if [ "${ALREADY}" = "true" ] && [ "${FORCE}" != "true" ]; then
-            echo "proceed=false" >> "$GITHUB_OUTPUT"
-            echo "Version ${{ steps.grafana.outputs.version }} already tagged — nothing to do"
-          else
-            echo "proceed=true" >> "$GITHUB_OUTPUT"
-            echo "Proceeding with ${{ steps.grafana.outputs.version }}"
-          fi
-
-      - name: Update Dockerfile
-        id: update
-        if: steps.decision.outputs.proceed == 'true'
-        run: |
-          VERSION="${{ steps.grafana.outputs.version }}"
           DATE=$(date +%Y%m%d)
-          NEW_LABEL="${VERSION}.${DATE}"
-
-          sed -i "s/ARG GRAFANA_VERSION=\"[^\"]*\"/ARG GRAFANA_VERSION=\"${VERSION}\"/" Dockerfile
-          sed -i "s/LABEL version=\"[^\"]*\"/LABEL version=\"${NEW_LABEL}\"/"           Dockerfile
-
-          echo "new_label=${NEW_LABEL}" >> "$GITHUB_OUTPUT"
-
-          echo "Dockerfile after update:"
-          grep -E "ARG GRAFANA_VERSION|LABEL version" Dockerfile
-
-      - name: Commit, tag and push
-        if: steps.decision.outputs.proceed == 'true'
-        run: |
-          NEW_LABEL="${{ steps.update.outputs.new_label }}"
 
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          git add Dockerfile
-          git commit -m "${NEW_LABEL}"
-          git tag "${NEW_LABEL}"
-          git push origin HEAD:master
-          git push origin "${NEW_LABEL}"
+          BUILT=0
 
-          echo "Pushed commit and tag: ${NEW_LABEL} — release.yml will now handle the build"
+          # Collect qualifying versions: non-prerelease, major >= 12, not yet tagged (unless forced)
+          # Group by major.minor, keep only the highest patch per branch
+          VERSIONS=$(echo "$RELEASES" | jq -r '
+            .[]
+            | select(.prerelease == false)
+            | .tag_name | ltrimstr("v")
+          ' | awk -F. '
+            $1 >= 12 {
+              key = $1 "." $2
+              if (!seen[key] || ($3 + 0) > patch[key]) {
+                seen[key] = $0
+                patch[key] = $3 + 0
+              }
+            }
+            END { for (k in seen) print seen[k] }
+          ' | sort -V)
 
-      - name: Display notification summary
-        if: steps.filter.outputs.qualifies == 'true'
-        run: |
+          echo "Qualifying Grafana versions (latest patch per branch):"
+          echo "${VERSIONS}"
+
+          while IFS= read -r VERSION; do
+            [ -z "${VERSION}" ] && continue
+
+            EXISTING=$(git tag --list "${VERSION}.*")
+            if [ -n "${EXISTING}" ] && [ "${FORCE_BUILD}" != "true" ]; then
+              echo "Skip ${VERSION}: already tagged (${EXISTING})"
+              continue
+            fi
+
+            NEW_LABEL="${VERSION}.${DATE}"
+            echo "Building ${NEW_LABEL}..."
+
+            sed -i "s/ARG GRAFANA_VERSION=\"[^\"]*\"/ARG GRAFANA_VERSION=\"${VERSION}\"/" Dockerfile
+            sed -i "s/LABEL version=\"[^\"]*\"/LABEL version=\"${NEW_LABEL}\"/"           Dockerfile
+
+            echo "Dockerfile after update:"
+            grep -E "ARG GRAFANA_VERSION|LABEL version" Dockerfile
+
+            git add Dockerfile
+            git commit -m "${NEW_LABEL}"
+            git tag "${NEW_LABEL}"
+            git push origin HEAD:master
+            git push origin "${NEW_LABEL}"
+
+            echo "Pushed commit and tag: ${NEW_LABEL} — release.yml will now handle the build"
+            BUILT=$((BUILT + 1))
+          done <<< "${VERSIONS}"
+
           echo "========================================"
-          echo "  Grafana Release Watcher — Notification"
-          echo "========================================"
-          echo "  Tag:           ${{ steps.grafana.outputs.tag }}"
-          echo "  Version:       ${{ steps.grafana.outputs.version }}"
-          echo "  Published:     ${{ steps.grafana.outputs.published }}"
-          echo "  Already built: ${{ steps.tag_check.outputs.already_tagged }}"
-          echo "  Would build:   ${{ steps.decision.outputs.proceed }}"
+          echo "  Grafana Release Watcher — Done"
+          echo "  Versions processed: ${BUILT}"
           echo "========================================"
