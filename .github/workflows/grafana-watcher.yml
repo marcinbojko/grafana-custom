@@ -52,15 +52,17 @@ jobs:
           BUILT=0
 
           # Collect qualifying versions: non-prerelease, major >= 12, not yet tagged (unless forced)
+          # Sanitize + → - (Docker tags don't allow +; Grafana Docker Hub uses - for security releases)
           # Group by major.minor, keep only the highest patch per branch
           VERSIONS=$(echo "$RELEASES" | jq -r '
             .[]
             | select(.prerelease == false)
             | .tag_name | ltrimstr("v")
-          ' | awk -F. '
+          ' | sed 's/+/-/g' \
+            | awk -F. '
             $1 >= 12 {
               key = $1 "." $2
-              if (!seen[key] || ($3 + 0) > patch[key]) {
+              if (!seen[key] || ($3 + 0) >= patch[key]) {
                 seen[key] = $0
                 patch[key] = $3 + 0
               }
