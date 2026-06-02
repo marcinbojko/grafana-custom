@@ -63,12 +63,44 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0 # need all tags to decide the 'Latest' badge
+
+      # Decide the 'Latest' badge deterministically, independent of which parallel
+      # release run finishes last. Our tags ("13.0.1-security-01.20260602") aren't
+      # valid semver, so GitHub would otherwise mark whichever release publishes last
+      # as latest. We instead mark latest ONLY when this tag is the highest version.
+      # normalize(): drop the trailing .YYYYMMDD, unify '+' → '-' (historical tags),
+      # and treat a plain release as "-security-00" so a security release of the same
+      # patch sorts above its base while a higher minor/patch still wins.
+      - name: Decide if this tag is the newest version
+        id: latest
+        run: |
+          normalize() {
+            local v="${1%.[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]}"
+            v="${v//+/-}"
+            case "$v" in
+              *-security-*) : ;;
+              *) v="${v}-security-00" ;;
+            esac
+            printf '%s\n' "$v"
+          }
+          CUR=$(normalize "${{ needs.check-image.outputs.tag }}")
+          NEWEST=$(git tag | grep -E '^[0-9]' | while read -r t; do normalize "$t"; done | sort -V | tail -n1)
+          if [ "${CUR}" = "${NEWEST}" ]; then
+            echo "make_latest=true" >> "$GITHUB_OUTPUT"
+            echo "✅ ${{ needs.check-image.outputs.tag }} is the newest version → Latest"
+          else
+            echo "make_latest=false" >> "$GITHUB_OUTPUT"
+            echo "ℹ️ Newer version exists (${NEWEST}) → not Latest"
+          fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.check-image.outputs.tag }}
           generate_release_notes: true
+          make_latest: ${{ steps.latest.outputs.make_latest }}
           body: |
             ## Docker Image
             `marcinbojko/grafana:${{ needs.check-image.outputs.tag }}`

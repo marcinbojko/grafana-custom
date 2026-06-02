@@ -52,23 +52,24 @@ jobs:
           BUILT=0
 
           # Collect qualifying versions: non-prerelease, major >= 12, not yet tagged (unless forced)
+          # tr strips raw control chars: GitHub release bodies occasionally contain unescaped
+          #   control chars (e.g. a literal newline), which makes jq >= 1.7 reject the whole
+          #   response and silently build nothing. They only appear inside JSON string values,
+          #   never in tag_name, so removing them is safe and keeps the JSON well-formed.
           # Sanitize + → - (Docker tags don't allow +; Grafana Docker Hub uses - for security releases)
-          # Group by major.minor, keep only the highest patch per branch
-          VERSIONS=$(echo "$RELEASES" | jq -r '
-            .[]
-            | select(.prerelease == false)
-            | .tag_name | ltrimstr("v")
-          ' | sed 's/+/-/g' \
-            | awk -F. '
-            $1 >= 12 {
-              key = $1 "." $2
-              if (!seen[key] || ($3 + 0) >= patch[key]) {
-                seen[key] = $0
-                patch[key] = $3 + 0
-              }
-            }
-            END { for (k in seen) print seen[k] }
-          ' | sort -V)
+          # Group by major.minor, keep only the highest version per branch. sort -V ranks
+          #   "13.0.1-security-01" above "13.0.1", so security releases supersede their base.
+          VERSIONS=$(echo "$RELEASES" \
+            | tr -d '\000-\037' \
+            | jq -r '
+              .[]
+              | select(.prerelease == false)
+              | .tag_name | ltrimstr("v")
+            ' | sed 's/+/-/g' \
+            | awk -F. '$1 + 0 >= 12' \
+            | sort -V \
+            | awk -F. '{ latest[$1 "." $2] = $0 } END { for (k in latest) print latest[k] }' \
+            | sort -V)
 
           echo "Qualifying Grafana versions (latest patch per branch):"
           echo "${VERSIONS}"
