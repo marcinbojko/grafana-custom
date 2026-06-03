@@ -39,6 +39,11 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FORCE_BUILD: ${{ inputs.force_build }}
         run: |
+          # -e/pipefail are GitHub's bash defaults; -u and explicit pipefail make
+          # it self-documenting and robust if the default shell is ever overridden.
+          # A curl HTTP error (-f) or a jq parse failure already aborts the step here.
+          set -euo pipefail
+
           RELEASES=$(curl -sf \
             -H "Authorization: Bearer ${GH_TOKEN}" \
             -H "Accept: application/vnd.github+json" \
@@ -52,26 +57,36 @@ jobs:
           BUILT=0
 
           # Collect qualifying versions: non-prerelease, major >= 12, not yet tagged (unless forced)
+          # tr strips raw control chars: GitHub release bodies occasionally contain unescaped
+          #   control chars (e.g. a literal newline), which makes jq >= 1.7 reject the whole
+          #   response (parse error → step fails). They only appear inside JSON string values,
+          #   never in tag_name, so removing them is safe and keeps the JSON well-formed.
+          #   This must run BEFORE jq — jq's gsub can't help, as jq rejects the bytes at
+          #   parse time, before any filter runs.
           # Sanitize + → - (Docker tags don't allow +; Grafana Docker Hub uses - for security releases)
-          # Group by major.minor, keep only the highest patch per branch
-          VERSIONS=$(echo "$RELEASES" | jq -r '
-            .[]
-            | select(.prerelease == false)
-            | .tag_name | ltrimstr("v")
-          ' | sed 's/+/-/g' \
-            | awk -F. '
-            $1 >= 12 {
-              key = $1 "." $2
-              if (!seen[key] || ($3 + 0) >= patch[key]) {
-                seen[key] = $0
-                patch[key] = $3 + 0
-              }
-            }
-            END { for (k in seen) print seen[k] }
-          ' | sort -V)
+          # Group by major.minor, keep only the highest version per branch. sort -V ranks
+          #   "13.0.1-security-01" above "13.0.1", so security releases supersede their base.
+          VERSIONS=$(echo "$RELEASES" \
+            | tr -d '\000-\037' \
+            | jq -r '
+              .[]
+              | select(.prerelease == false)
+              | .tag_name | ltrimstr("v")
+            ' | sed 's/+/-/g' \
+            | awk -F. '$1 + 0 >= 12' \
+            | sort -V \
+            | awk -F. '{ latest[$1 "." $2] = $0 } END { for (k in latest) print latest[k] }' \
+            | sort -V)
 
           echo "Qualifying Grafana versions (latest patch per branch):"
           echo "${VERSIONS}"
+
+          # pipefail catches a failing stage; this catches the silent case where every
+          # stage succeeds but yields nothing (e.g. an empty API response) — never expected.
+          if [ -z "${VERSIONS}" ]; then
+            echo "ERROR: no qualifying Grafana versions parsed — likely a fetch/parse problem. Aborting." >&2
+            exit 1
+          fi
 
           while IFS= read -r VERSION; do
             [ -z "${VERSION}" ] && continue

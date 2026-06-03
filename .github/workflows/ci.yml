@@ -35,7 +35,10 @@ jobs:
       - name: Run Super-Linter
         uses: super-linter/super-linter@v8
         env:
-          DEFAULT_BRANCH: ${{ github.ref_name }}
+          # Must be a real branch to diff against. github.ref_name is "<PR>/merge"
+          # on pull_request events, which doesn't exist as a branch and makes
+          # super-linter abort — so use the repo's actual default branch instead.
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_ALL_CODEBASE: ${{ github.event_name != 'pull_request' }}
           DOCKERFILE_HADOLINT_FILE_NAME: .hadolint.yaml
