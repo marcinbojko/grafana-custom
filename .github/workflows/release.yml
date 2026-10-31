@@ -58,7 +58,12 @@ jobs:
 
   create-release:
     needs: [check-image, build-if-needed]
-    if: always() && needs.check-image.result == 'success'
+    # always() lets us run when the build was skipped (image already exists),
+    # but a failed/cancelled build must block the release.
+    if: >-
+      always() &&
+      needs.check-image.result == 'success' &&
+      (needs.build-if-needed.result == 'success' || needs.build-if-needed.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
